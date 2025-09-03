@@ -1,6 +1,6 @@
 {
   "name": "bottom-tabs-auth-issue-repro",
-  "main": "expo-router/entry",
+  "main": "./src/index.ts",
   "version": "1.0.0",
   "scripts": {
     "start": "APP_VARIANT=development expo start --dev-client",
@@ -9,16 +9,19 @@
     "prebuild": "APP_VARIANT=development expo prebuild",
     "android": "APP_VARIANT=development expo run:android",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "ts:check": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@expo-google-fonts/source-code-pro": "^0.4.0",
     "@bottom-tabs/react-navigation": "0.11.1",
     "expo-secure-store": "~14.2.4",
-    "@react-navigation/bottom-tabs": "^7.3.10",
-    "@react-navigation/elements": "^2.3.8",
-    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/bottom-tabs": "^7.4.4",
+    "@react-navigation/elements": "^2.6.1",
+    "@react-navigation/native": "^7.1.16",
+    "@react-navigation/native-stack": "^7.3.23",
+    "@react-navigation/stack": "^7.4.4",
     "react-native-edge-to-edge": "1.6.0",
     "expo-build-properties": "~0.14.8",
     "expo": "~53.0.22",
