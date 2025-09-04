@@ -1,13 +1,13 @@
 import { useState } from "react";
 import {
   SafeAreaView,
+  StyleSheet,
   Text,
   TouchableOpacity,
   useWindowDimensions,
   View,
 } from "react-native";
 import { SceneMap, TabView } from "react-native-tab-view";
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { TopCategoriesScreen } from "./TopCategories";
 import { TopStreamsScreen } from "./TopStreamsScreen";
 
@@ -27,7 +27,10 @@ export function TopScreen() {
     categories: TopCategoriesScreen,
   });
 
-  const { theme } = useUnistyles();
+  // Theme colors as constants
+  const colors = {
+    plumBorder: "#8B5CF6",
+  };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
@@ -50,7 +53,7 @@ export function TopScreen() {
                     styles.tab,
                     {
                       borderBottomColor:
-                        index === i ? theme.colors.plum.border : "transparent",
+                        index === i ? colors.plumBorder : "transparent",
                     },
                   ]}
                 >
@@ -65,7 +68,7 @@ export function TopScreen() {
   );
 }
 
-const styles = StyleSheet.create(() => ({
+const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -78,4 +81,4 @@ const styles = StyleSheet.create(() => ({
     padding: 5,
     marginHorizontal: 10,
   },
-}));
+});

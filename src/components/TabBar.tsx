@@ -1,10 +1,9 @@
 import { type BottomTabBarProps } from "@bottom-tabs/react-navigation";
 import { BlurView } from "expo-blur";
 import { SFSymbol, SymbolView } from "expo-symbols";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { runOnJS } from "react-native-reanimated";
-import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { useAppNavigation } from "../hooks/useAppNavigation";
 import { TabParamList } from "../navigators/TabNavigator";
 
@@ -25,18 +24,21 @@ export function TabBar(props: BottomTabBarProps) {
     }
   });
 
-  const { theme } = useUnistyles();
+  // Theme values as constants
+  const colors = {
+    grayAccent: "#888888",
+    accentAccent: "#007AFF",
+    grayBgAlpha: "rgba(128, 128, 128, 0.1)",
+    grayBorder: "rgba(128, 128, 128, 0.3)",
+    redAccent: "#FF3B30",
+  };
 
   return (
     <GestureDetector gesture={gesture}>
       <BlurView
         intensity={75}
         style={styles.main}
-        tint={
-          theme.name === "dark"
-            ? "systemThickMaterialDark"
-            : "systemThickMaterialLight"
-        }
+        tint="systemThickMaterialDark"
       >
         {state.routes.map((route, index) => {
           const options = descriptors[route.key]?.options;
@@ -46,9 +48,8 @@ export function TabBar(props: BottomTabBarProps) {
           const icon = icons[route.name as keyof TabParamList];
 
           return (
-            <Button
+            <TouchableOpacity
               key={route.key}
-              label={options?.title ?? "Tab"}
               style={styles.tab}
               onLongPress={() => {
                 navigation.emit({
@@ -67,16 +68,14 @@ export function TabBar(props: BottomTabBarProps) {
                 }
               }}
             >
-              {icon && (
-                <SymbolView name={icon} tintColor={theme.colors.gray.accent} />
-              )}
+              {icon && <SymbolView name={icon} tintColor={colors.grayAccent} />}
 
               {options?.tabBarBadge && (
                 <View style={styles.badge}>
                   <Text>{options.tabBarBadge}</Text>
                 </View>
               )}
-            </Button>
+            </TouchableOpacity>
           );
         })}
       </BlurView>
@@ -84,26 +83,18 @@ export function TabBar(props: BottomTabBarProps) {
   );
 }
 
-const styles = StyleSheet.create((theme, rt) => ({
+const styles = StyleSheet.create({
   badge: {
-    backgroundColor: theme.colors.accent.accent,
-    borderCurve: "continuous",
-    borderRadius: theme.radii.md,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing.sm * 0.4,
+    backgroundColor: "#007AFF",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     position: "absolute",
-    transform: [
-      {
-        translateX: theme.spacing.lg,
-      },
-      {
-        translateY: theme.spacing.lg,
-      },
-    ],
+    transform: [{ translateX: 24 }, { translateY: 24 }],
   },
   main: {
-    backgroundColor: theme.colors.gray.bgAlpha,
-    borderTopColor: theme.colors.gray.border,
+    backgroundColor: "rgba(128, 128, 128, 0.1)",
+    borderTopColor: "rgba(128, 128, 128, 0.3)",
     borderTopWidth: StyleSheet.hairlineWidth,
     bottom: 0,
     flexDirection: "row",
@@ -116,8 +107,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   tab: {
     alignItems: "center",
     flexGrow: 1,
-    paddingBottom: theme.spacing.xl + rt.insets.bottom,
-    paddingHorizontal: theme.spacing["3xl"],
-    paddingTop: theme.spacing.lg,
+    paddingBottom: 32 + 34, // xl + bottom inset approximation
+    paddingHorizontal: 48,
+    paddingTop: 24,
   },
-}));
+});

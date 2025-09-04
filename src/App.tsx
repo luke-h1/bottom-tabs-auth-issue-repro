@@ -1,19 +1,21 @@
-import { AppNavigator } from "./navigators/AppNavigator";
-import { useNavigationPersistence } from "./navigators/navigationUtilities";
+import { NavigationContainer } from "@react-navigation/native";
+import { SimpleTabNavigator } from "./navigators/SimpleTabNavigator";
 import { Providers } from "./Providers/Providers";
-import * as storage from "./utils/async-storage";
 
 function App() {
-  const {
-    // initialNavigationState,
-    onNavigationStateChange,
-    // isRestored: isNavigationStateRestored,
-  } = useNavigationPersistence(storage, "NAVIGATION_STATE");
+  // const {
+  // initialNavigationState,
+  // onNavigationStateChange,
+  // isRestored: isNavigationStateRestored,
+  // } = useNavigationPersistence(storage, "NAVIGATION_STATE");
 
   return (
     <Providers>
-      <AppNavigator onStateChange={onNavigationStateChange}></AppNavigator>
+      <NavigationContainer>
+        <SimpleTabNavigator />
+      </NavigationContainer>
     </Providers>
   );
 }
+
 export default App;

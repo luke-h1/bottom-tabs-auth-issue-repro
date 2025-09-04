@@ -14,18 +14,18 @@ type Variant = "development" | "preview";
 // https://docs.expo.dev/tutorial/eas/multiple-app-variants
 const APP_VARIANT_CONFIG: Record<Variant, AppVariantConfig> = {
   development: {
-    name: "Bottom Tabs Auth Issue Repro (dev)",
+    name: "bottom-tabs-repro (dev)",
     icon: "./assets/images/react-logo.png",
     iosBundleIdentifier: "bottom-tabs-repro-dev",
-    androidPackageName: "com.lhowsam.bottom-tabs-repro.dev",
+    androidPackageName: "com.lhowsam.bottomtabsrepro.dev",
     splashImage: "./assets/images/react-logo.png",
     splashBackgroundColor: "#000000",
   },
   preview: {
-    name: "Bottom Tabs Auth Issue Repro (preview)",
+    name: "bottom-tabs-repro (preview)",
     icon: "./assets/images/react-logo.png",
     iosBundleIdentifier: "bottom-tabs-repro-preview",
-    androidPackageName: "com.lhowsam.bottom-tabs-repro.preview",
+    androidPackageName: "com.lhowsam.bottomtabsrepro.preview",
     splashImage: "./assets/images/react-logo.png",
     splashBackgroundColor: "#000000",
   },

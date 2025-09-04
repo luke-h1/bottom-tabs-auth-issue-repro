@@ -20,7 +20,6 @@ interface State {
  * - [React Error Boundaries](https://reactjs.org/docs/error-boundaries.html)
  */
 export class ErrorBoundary extends Component<Props, State> {
-  // @ts-expect-error
   state: Omit<ErrorDetailsProps, "onReset"> = { error: null, errorInfo: null };
 
   // To avoid unnecessary re-renders

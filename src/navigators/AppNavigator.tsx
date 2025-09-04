@@ -9,6 +9,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StackScreenProps } from "@react-navigation/stack";
 import { ComponentProps, useMemo } from "react";
 import { useColorScheme } from "react-native";
+import { useAuthContext } from "../context/AuthContext";
+import { usePopulateAuth } from "../hooks/usePopulateAuth";
 import { TabNavigator, TabParamList } from "./TabNavigator";
 import { TopStackNavigator, TopStackParamList } from "./TopStackNavigator";
 import { BaseConfig } from "./config";
@@ -30,7 +32,6 @@ export type AppStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
 
   // streams
-  Streams: NavigatorScreenParams<StreamStackParamList>;
 
   // categories
   Categories: undefined;
@@ -56,6 +57,9 @@ export type AppStackScreenProps<T extends keyof AppStackParamList> =
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
 const AppStack = () => {
+  usePopulateAuth();
+  const { ready } = useAuthContext();
+
   return (
     <Stack.Navigator
       screenOptions={{

@@ -2,14 +2,56 @@ import {
   createContext,
   ReactNode,
   use,
-  useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
+import { AuthSessionResult, TokenResponse } from "../mocks/expo-auth-session";
+import * as SecureStore from "../mocks/expo-secure-store";
+import { toast } from "../mocks/sonner-native";
+import { queryClient } from "../Providers/Providers";
+import { twitchApi } from "../services/api";
+import {
+  DefaultTokenResponse,
+  twitchService,
+  UserInfoResponse,
+} from "../services/twitch-service";
+import { logger } from "../utils/logger";
+
+export const storageKeys = {
+  anon: "V1_foam-anon", // anon token
+  user: "V1_foam-user", // logged in token
+} as const;
+
+export interface TwitchToken {
+  accessToken: string;
+  expiresIn: number;
+  tokenType: string;
+}
+
+interface AuthState {
+  isLoggedIn: boolean;
+  isAnonAuth: boolean;
+  token: TwitchToken;
+}
 
 export interface AuthContextState {
-  authenticated: boolean;
-  setAuthenticated: (val: boolean) => void;
+  user?: UserInfoResponse;
+  authState?: AuthState;
+  loginWithTwitch: (
+    response: AuthSessionResult | null
+  ) => Promise<null | undefined>;
+  populateAuthState: () => Promise<void>;
+  logout: () => Promise<void>;
+
+  // for unit tests only
+  fetchAnonToken: (testResult?: DefaultTokenResponse) => Promise<void>;
+
+  ready: boolean;
+}
+
+interface State {
+  authState?: AuthState;
   ready: boolean;
 }
 
@@ -19,35 +61,261 @@ export const AuthContext = createContext<AuthContextState | undefined>(
 
 export type AuthContextProviderProps = {
   children: ReactNode;
+  enableTestResult?: boolean;
+  testResult?: DefaultTokenResponse;
 };
 
-export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
-  const [state, setState] = useState<
-    Omit<AuthContextState, "setAuthenticated">
-  >({
+export const AuthContextProvider = ({
+  children,
+  enableTestResult,
+  testResult,
+}: AuthContextProviderProps) => {
+  const [state, setState] = useState<State>({
     ready: false,
-    authenticated: false,
   });
 
-  const onAuth = useCallback(({ val }: { val: boolean }) => {
-    setState((prev) => ({
-      ...prev,
-      authenticated: val,
-    }));
+  const [user, setUser] = useState<UserInfoResponse | undefined>(undefined);
+
+  const fetchAnonToken = async () => {
+    try {
+      let result = await twitchService.getDefaultToken();
+
+      // hack to get around tests getting hung up on micro queue
+      if (process.env.NODE_ENV === "test" && enableTestResult) {
+        result = testResult || {
+          access_token: "123",
+          expires_in: 3600,
+          token_type: "bearer",
+        };
+      }
+
+      setState({
+        ready: true,
+        authState: {
+          isAnonAuth: true,
+          isLoggedIn: false,
+          token: {
+            accessToken: result.access_token,
+            expiresIn: result.expires_in,
+            tokenType: result.token_type,
+          },
+        },
+      });
+
+      await SecureStore.setItemAsync(
+        storageKeys.anon,
+        JSON.stringify({
+          accessToken: result.access_token,
+          expiresIn: result.expires_in,
+          tokenType: result.token_type,
+        })
+      );
+      twitchApi.setAuthToken(result.access_token);
+    } catch (e) {
+      logger.auth.error("Failed to get anon auth", e);
+
+      // Set ready to true even if token fetching fails
+      setState((prev) => ({ ...prev, ready: true }));
+    }
+  };
+
+  const doAuth = async (token: TokenResponse) => {
+    try {
+      const isValidToken = await twitchService.validateToken(token.accessToken);
+
+      if (!isValidToken) {
+        // token isn't valid, do anon auth
+        await SecureStore.deleteItemAsync(storageKeys.anon);
+        await SecureStore.deleteItemAsync(storageKeys.user);
+        await doAnonAuth();
+
+        return;
+      }
+
+      const u = await twitchService.getUserInfo(token.accessToken);
+      setUser(u);
+      twitchApi.setAuthToken(token.accessToken);
+      await SecureStore.setItemAsync(
+        storageKeys.user,
+        JSON.stringify({
+          accessToken: token.accessToken,
+          expiresIn: token.expiresIn,
+          tokenType: token.tokenType,
+        })
+      );
+      setState({
+        ready: true,
+        authState: {
+          isAnonAuth: false,
+          isLoggedIn: true,
+          token: {
+            accessToken: token.accessToken,
+            expiresIn: token.expiresIn as number,
+            tokenType: token.tokenType,
+          },
+        },
+      });
+    } catch (error) {
+      logger.auth.error("doAuth failed", error);
+      // Clear tokens and fall back to anon auth
+      await SecureStore.deleteItemAsync(storageKeys.anon);
+      await SecureStore.deleteItemAsync(storageKeys.user);
+      await doAnonAuth();
+    }
+  };
+
+  const loginWithTwitch = async (response: AuthSessionResult | null) => {
+    try {
+      if (!response || response?.type !== "success") {
+        toast.error("Couldn't authenticate with twitch");
+        await doAnonAuth();
+        return null;
+      }
+
+      if (!response.authentication) {
+        await doAnonAuth();
+        console.info("auth failed");
+        return null;
+      }
+
+      // console.log('tokenType ->', response.authentication.tokenType);
+      // console.log('expiresIn ->', response.authentication.expiresIn);
+      // console.log('accecssToken ->', response.authentication.accessToken);
+
+      // we have succeeded
+      setState({
+        ready: true,
+        authState: {
+          isAnonAuth: false,
+          isLoggedIn: true,
+          token: {
+            accessToken: response.authentication.accessToken,
+            expiresIn: response.authentication.expiresIn as number,
+            tokenType: response.authentication.tokenType,
+          },
+        },
+      });
+      const u = await twitchService.getUserInfo(
+        response.authentication.accessToken
+      );
+      setUser(u);
+
+      // evict cached anon details
+      await SecureStore.deleteItemAsync(storageKeys.anon);
+
+      const stringifedAuth = JSON.stringify(response.authentication);
+
+      // set tokens in secure-store
+      await SecureStore.setItemAsync(storageKeys.user, stringifedAuth);
+
+      // set header in axios
+      twitchApi.setAuthToken(response.authentication.accessToken);
+      return null;
+    } catch (error) {
+      logger.auth.error("loginWithTwitch failed", error);
+      toast.error("Login failed, please try again");
+      await doAnonAuth();
+      return null;
+    }
+  };
+
+  const doAnonAuth = async (token?: TwitchToken) => {
+    try {
+      if (!token?.accessToken) {
+        // request a default token and set it in state
+        await fetchAnonToken();
+      } else {
+        // we have an anonymous token, check its validity
+        const isValidToken = await twitchService.validateToken(
+          token.accessToken
+        );
+
+        console.log("isValidToken ->", isValidToken);
+
+        // if it's expired, get a new token and set it in state
+        if (!isValidToken) {
+          twitchApi.removeAuthToken();
+          await fetchAnonToken();
+        } else {
+          setState({
+            ready: true,
+            authState: {
+              isAnonAuth: true,
+              isLoggedIn: false,
+              token: {
+                accessToken: token.accessToken,
+                expiresIn: token.expiresIn,
+                tokenType: token.tokenType,
+              },
+            },
+          });
+          twitchApi.setAuthToken(token.accessToken);
+        }
+      }
+    } catch (error) {
+      logger.auth.error("doAnonAuth failed", error);
+      // Fall back to fetchAnonToken if validation fails
+      await fetchAnonToken();
+    }
+  };
+
+  const populateAuthState = async () => {
+    try {
+      const [storedAnonToken, storedAuthToken] = await Promise.all([
+        SecureStore.getItemAsync(storageKeys.anon),
+        SecureStore.getItemAsync(storageKeys.user),
+      ]);
+
+      if (storedAuthToken) {
+        const parsedAuthToken = JSON.parse(storedAuthToken) as TokenResponse;
+        await doAuth(parsedAuthToken);
+      } else if (storedAnonToken) {
+        const parsedAnonToken = JSON.parse(storedAnonToken) as TwitchToken;
+        await doAnonAuth(parsedAnonToken);
+      } else {
+        await doAnonAuth();
+      }
+    } catch (error) {
+      logger.auth.error("Failed to populate auth state", error);
+      // Ensure we set ready to true even if auth fails
+      setState((prev) => ({ ...prev, ready: true }));
+    }
+  };
+
+  useEffect(() => {
+    void (async () => {
+      await populateAuthState();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const contextState: AuthContextState = useMemo(() => {
     return {
+      authState: state.authState,
+      loginWithTwitch,
+      populateAuthState,
+      logout: async () => {
+        await Promise.all([
+          SecureStore.deleteItemAsync(storageKeys.user),
+          SecureStore.deleteItemAsync(storageKeys.anon),
+        ]);
+        setState({ ready: true });
+        setUser(undefined);
+        twitchApi.removeAuthToken();
+        await queryClient.invalidateQueries();
+        await queryClient.resetQueries();
+        await doAnonAuth();
+      },
+      fetchAnonToken,
+      user,
       ready: state.ready,
-      authenticated: state.authenticated,
-      setAuthenticated: onAuth,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.authenticated]);
+  }, [state.authState, user]);
 
-  return state.ready ? (
+  return (
     <AuthContext.Provider value={contextState}>{children}</AuthContext.Provider>
-  ) : null;
+  );
 };
 
 export function useAuthContext() {
@@ -59,4 +327,24 @@ export function useAuthContext() {
     );
   }
   return context;
+}
+
+interface AuthContextTestProviderProps extends AuthContextState {
+  fetchAnonToken: (testResult?: DefaultTokenResponse) => Promise<void>;
+  children: ReactNode;
+}
+
+export function AuthContextTestProvider({
+  children,
+  ...rest
+}: AuthContextTestProviderProps) {
+  return (
+    <AuthContext.Provider
+      value={{
+        ...rest,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }

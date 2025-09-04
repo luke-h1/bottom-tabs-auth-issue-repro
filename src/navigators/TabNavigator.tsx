@@ -3,7 +3,6 @@ import { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import { CompositeScreenProps } from "@react-navigation/native";
 import { SFSymbol } from "expo-symbols";
 import { ComponentType, FC } from "react";
-import { useUnistyles } from "react-native-unistyles";
 import { TabBar } from "../components/TabBar";
 import { useAuthContext } from "../context/AuthContext";
 import { FollowingScreen } from "../screens/FollowingScreen";
@@ -68,18 +67,17 @@ const screens: Screen[] = [
 ];
 
 export function TabNavigator() {
-  const { authenticated } = useAuthContext();
-  const { theme } = useUnistyles();
+  const { authState } = useAuthContext();
 
   return (
     <Tab.Navigator
-      tabBarActiveTintColor={theme.colors.grass.accentAlpha}
-      tabBarInactiveTintColor={theme.colors.gray.accent}
+      tabBarActiveTintColor="#10B981"
+      tabBarInactiveTintColor="#888888"
       hapticFeedbackEnabled
       tabBar={(props) => <TabBar {...props} />}
     >
       {screens.map((screen) => {
-        if (screen.requiresAuth && !authenticated) {
+        if (screen.requiresAuth && !authState?.isLoggedIn) {
           return null;
         }
 

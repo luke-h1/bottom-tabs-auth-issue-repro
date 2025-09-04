@@ -1,6 +1,11 @@
 import { type ErrorInfo, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { StyleSheet } from "react-native-unistyles";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export interface ErrorDetailsProps {
   error: Error | null;
@@ -43,40 +48,44 @@ export function ErrorDetails(props: ErrorDetailsProps) {
   );
 }
 
-const styles = StyleSheet.create((theme) => ({
+const styles = StyleSheet.create({
   container: {
     justifyContent: "center",
     alignItems: "center",
   },
   topSection: {
     alignItems: "center",
-    marginBottom: theme.spacing.lg,
+    marginBottom: 24,
   },
   heading: {
-    marginBottom: theme.spacing.md,
+    marginBottom: 16,
+    fontSize: 18,
+    fontWeight: "bold",
   },
   toggleStackTrace: {
     color: "blue",
-    marginVertical: theme.spacing.md,
+    marginVertical: 16,
   },
   errorSection: {
     flex: 2,
-    backgroundColor: theme.colors.accent.accent,
-    marginBottom: theme.spacing.md,
-    marginTop: theme.spacing.lg,
+    backgroundColor: "#007AFF",
+    marginBottom: 16,
+    marginTop: 24,
     borderRadius: 6,
   },
   errorSectionContentContainer: {
-    // padding: theme.spacing.md,
+    padding: 16,
   },
   errorBackTrace: {
-    marginTop: theme.spacing.md,
+    marginTop: 16,
   },
   button: {
-    backgroundColor: theme.colors.red.accent,
+    backgroundColor: "#FF3B30",
   },
   resetButton: {
-    backgroundColor: theme.colors.red.accent,
-    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: "#FF3B30",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-}));
+});
